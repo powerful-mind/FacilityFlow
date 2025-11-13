@@ -12,10 +12,16 @@ const bookingSchema = new mongoose.Schema({
   peonAttendant: String,
   hall: String,
   status: { type: String, default: 'Pending' },
-  hodSignature: String, // ✅ HOD’s signature path
+  hodSignature: String,
   submittedBy: String,
-  hallManager: String, // ✅ assigned hall manager
-  rejectionReason: String, // ✅ reason entered by hall manager
+  hallManager: String,
+  rejectionReason: String,
+  
+  // ✅ NEW FIELD: users who hid this booking
+  hiddenBy: {
+    type: [String],
+    default: [],
+  },
 });
 
 module.exports = mongoose.model('Booking', bookingSchema);

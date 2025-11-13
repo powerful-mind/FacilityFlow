@@ -109,5 +109,25 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// 🟦 Hide booking (Soft Clear - Permanent)
+router.patch("/hide/:id", async (req, res) => {
+  try {
+    const { userName } = req.body;
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // Add user to hidden list if not already there
+    if (!booking.hiddenBy.includes(userName)) {
+      booking.hiddenBy.push(userName);
+      await booking.save();
+    }
+
+    res.json({ message: "Booking hidden successfully" });
+  } catch (err) {
+    console.error("Error hiding booking:", err);
+    res.status(500).json({ message: "Error hiding booking" });
+  }
+});
+
 
 module.exports = router;

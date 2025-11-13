@@ -7,12 +7,14 @@ export default function DashboardClub() {
   const [bookings, setBookings] = useState([]);
   const user = JSON.parse(localStorage.getItem("user"));
 
-  // 🟢 Fetch bookings by current user
+  // 🟢 Fetch bookings by current user (exclude hidden)
   useEffect(() => {
     const fetchBookings = async () => {
       try {
         const res = await API.get("/bookings");
-        const myBookings = res.data.filter((b) => b.submittedBy === user.name);
+        const myBookings = res.data.filter(
+          (b) => b.submittedBy === user.name && !b.hiddenBy?.includes(user.name)
+        );
         setBookings(myBookings);
       } catch (err) {
         console.error("Error fetching bookings:", err);
@@ -21,27 +23,49 @@ export default function DashboardClub() {
     fetchBookings();
   }, [user.name]);
 
-  // 🗑️ Clear single booking (UI only)
-  const clearBooking = (id) => {
+  // 🗑️ Clear single booking (mark hidden in backend)
+  const clearBooking = async (id) => {
     if (window.confirm("Are you sure you want to clear this booking?")) {
-      setBookings((prev) => prev.filter((b) => b._id !== id));
+      try {
+        await API.patch(`/bookings/hide/${id}`, { userName: user.name });
+        setBookings((prev) => prev.filter((b) => b._id !== id));
+      } catch (err) {
+        console.error("Error hiding booking:", err);
+        alert("Failed to clear booking!");
+      }
     }
   };
 
-  // 🧹 Clear all approved/rejected bookings (UI only)
-  const clearAllApprovedRejected = () => {
+  // 🧹 Clear all approved/rejected bookings (mark hidden in backend)
+  const clearAllApprovedRejected = async () => {
     const confirmClear = window.confirm(
       "Are you sure you want to clear all approved/rejected bookings?"
     );
     if (!confirmClear) return;
 
-    setBookings((prev) =>
-      prev.filter(
-        (b) =>
-          b.status !== "Hall Approved" && !b.status.includes("Rejected")
-      )
-    );
-    alert("Cleared all approved/rejected bookings from view!");
+    try {
+      const hideable = bookings.filter(
+        (b) => b.status === "Hall Approved" || b.status.includes("Rejected")
+      );
+
+      await Promise.all(
+        hideable.map((b) =>
+          API.patch(`/bookings/hide/${b._id}`, { userName: user.name })
+        )
+      );
+
+      setBookings((prev) =>
+        prev.filter(
+          (b) =>
+            b.status !== "Hall Approved" && !b.status.includes("Rejected")
+        )
+      );
+
+      alert("Cleared all approved/rejected bookings from your view!");
+    } catch (err) {
+      console.error("Error hiding bookings:", err);
+      alert("Failed to clear approved/rejected bookings!");
+    }
   };
 
   return (
